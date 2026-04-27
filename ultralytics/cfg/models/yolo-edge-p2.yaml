@@ -1,0 +1,99 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
+# Ultralytics YOLO-Edge object detection model optimized for real-time edge inference
+# and small object detection with minimal computational overhead.
+#
+# Key optimizations:
+# - P2/4 detection head for small objects (vật thể vài pixel)
+# - RepGhostBlock: Reparameterization + Ghost convolution for edge deployment
+# - C2f_Edge: Depthwise separable convolutions for reduced FLOPs
+# - EdgeSPPF: Optimized spatial pyramid pooling
+# - BiFPN_Add: Weighted feature fusion
+# - ECA Attention: Lightweight channel attention
+#
+# Performance targets:
+# - Nano:  ~1.5M params, ~4 GFLOPs, 30+ FPS on Raspberry Pi 4
+# - Small: ~4M params, ~12 GFLOPs, 60+ FPS on Jetson Nano
+# - Medium: ~8M params, ~25 GFLOPs, 30+ FPS on Jetson Nano
+
+# Parameters
+nc: 80 # number of classes
+scales:
+  # [depth, width, max_channels]
+  n: [0.33, 0.25, 512]  # YOLO-Edge-Nano-P2: ~1.5M params, ~4 GFLOPs
+  s: [0.50, 0.50, 512]  # YOLO-Edge-Small-P2: ~4M params, ~12 GFLOPs
+  m: [0.67, 0.75, 768]  # YOLO-Edge-Medium-P2: ~8M params, ~25 GFLOPs
+
+backbone:
+  # [from, repeats, module, args]
+  # P1 - Initial downsampling
+  - [-1, 1, Conv, [32, 3, 2]]           # 0-P1/2: Lightweight stem
+  
+  # P2 - Small object features (stride 4)
+  - [-1, 1, RepConv_Edge, [64, 3, 2]]   # 1-P2/4: Reparameterized for fast inference
+  - [-1, 2, C2f_Edge, [64, True, 0.5]]  # 2: Edge-optimized C2f
+  
+  # P3 - Low-level features (stride 8)
+  - [-1, 1, RepConv_Edge, [128, 3, 2]]  # 3-P3/8
+  - [-1, 3, C2f_Edge, [128, True, 0.5]] # 4: Depthwise bottleneck stack
+  
+  # P4 - Mid-level features (stride 16)
+  - [-1, 1, RepConv_Edge, [256, 3, 2]]  # 5-P4/16
+  - [-1, 4, C2f_Edge, [256, True, 0.5]] # 6
+  
+  # P5 - High-level features (stride 32)
+  - [-1, 1, RepConv_Edge, [512, 3, 2]]  # 7-P5/32
+  - [-1, 2, C2f_Edge, [512, True, 0.5]] # 8
+  - [-1, 1, EdgeSPPF, [512, 5]]         # 9: Fast SPP variant
+  - [-1, 1, ECAAttention, []]          # 10: Lightweight channel attention
+
+head:
+  # FPN - Top-down pathway with BiFPN weighted fusion
+  # P4 fusion
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 6], 1, BiFPN_Add, [256]]      # 12: Weighted fusion with P4
+  - [-1, 2, C2f_Edge, [256, True, 0.5]] # 13
+  
+  # P3 fusion
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 4], 1, BiFPN_Add, [128]]      # 15: Weighted fusion with P3
+  - [-1, 2, C2f_Edge, [128, True, 0.5]] # 16
+  
+  # P2 fusion - Critical for small object detection
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 2], 1, BiFPN_Add, [64]]       # 18: Weighted fusion with P2
+  - [-1, 2, C2f_Edge, [64, True, 0.5]]  # 19 (P2/4-xsmall)
+  
+  # PAN - Bottom-up pathway
+  # P3 aggregation
+  - [-1, 1, RepConv_Edge, [64, 3, 2]]   # 20
+  - [[-1, 16], 1, BiFPN_Add, [128]]     # 21: Fusion with P3 from FPN
+  - [-1, 2, C2f_Edge, [128, True, 0.5]] # 22 (P3/8-small)
+  
+  # P4 aggregation
+  - [-1, 1, RepConv_Edge, [128, 3, 2]] # 23
+  - [[-1, 13], 1, BiFPN_Add, [256]]     # 24: Fusion with P4 from FPN
+  - [-1, 2, C2f_Edge, [256, True, 0.5]] # 25 (P4/16-medium)
+  
+  # P5 aggregation
+  - [-1, 1, RepConv_Edge, [256, 3, 2]] # 26
+  - [[-1, 10], 1, BiFPN_Add, [512]]     # 27: Fusion with P5 from backbone
+  - [-1, 2, C2f_Edge, [512, True, 0.5]] # 28 (P5/32-large)
+  
+  # Detection head - P2, P3, P4, P5 for multi-scale detection
+  - [[19, 22, 25, 28], 1, Detect, [nc]]  # Detect(P2, P3, P4, P5)
+
+# Edge deployment optimizations
+edge_optimizations:
+  fuse_conv_bn: true        # Fuse Conv+BN for inference
+  reparameterize: true       # RepGhostBlock reparameterization
+  quantization:             # Quantization config for edge
+    backend: tensorrt       # tensorrt, openvino, onnxruntime
+    precision: int8         # fp32, fp16, int8
+    calibration: 100        # Calibration images for PTQ
+  pruning:
+    enabled: true
+    sparsity: 0.3           # 30% weight pruning
+    method: l1_unstructured
+  input_shape: [3, 640, 640]  # Standard input size
+  batch_size: 1             # Single batch for real-time
