@@ -8,7 +8,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ultralytics.nn.autobackend import check_class_names
 from ultralytics.nn.modules import (
@@ -28,12 +28,15 @@ from ultralytics.nn.modules import (
     A2C2f,
     AConv,
     ADown,
+    BiFPN_Add,
     Bottleneck,
     BottleneckCSP,
     C2f,
+    C2f_Edge,
     C2fAttn,
     C2fCIB,
     C2fPSA,
+    C3_Edge,
     C3Ghost,
     C3k2,
     C3x,
@@ -45,8 +48,14 @@ from ultralytics.nn.modules import (
     Conv2,
     ConvTranspose,
     Detect,
+    # Edge-optimized heads
+    Detect_Edge,
+    Detect_Edge_End2End,
+    Detect_Small,
     DWConv,
     DWConvTranspose2d,
+    ECAAttention,
+    EdgeSPPF,
     Focus,
     GhostBottleneck,
     GhostConv,
@@ -59,6 +68,9 @@ from ultralytics.nn.modules import (
     Pose26,
     RepC3,
     RepConv,
+    RepConv_Edge,
+    # Edge-optimized modules
+    RepGhostBlock,
     RepNCSPELAN4,
     RepVGGDW,
     ResNetLayer,
@@ -72,20 +84,6 @@ from ultralytics.nn.modules import (
     YOLOESegment,
     YOLOESegment26,
     v10Detect,
-    # Edge-optimized modules
-    RepGhostBlock,
-    C2f_Edge,
-    C3_Edge,
-    BiFPN_Add,
-    ASFF_Lite,
-    DyHead_Edge,
-    EdgeSPPF,
-    ECAAttention,
-    RepConv_Edge,
-    # Edge-optimized heads
-    Detect_Edge,
-    Detect_Small,
-    Detect_Edge_End2End,
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, LOGGER, WINDOWS, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -1391,11 +1389,9 @@ class SafeClass:
 
     def __init__(self, *args, **kwargs):
         """Initialize SafeClass instance, ignoring all arguments."""
-        pass
 
     def __call__(self, *args, **kwargs):
         """Run SafeClass instance, ignoring all arguments."""
-        pass
 
 
 class SafeUnpickler(pickle.Unpickler):
@@ -1731,8 +1727,21 @@ def parse_model(d, ch, verbose=True):
             args.extend([reg_max, end2end, [ch[x] for x in f]])
             if m is Segment or m is YOLOESegment or m is Segment26 or m is YOLOESegment26:
                 args[2] = make_divisible(min(args[2], max_channels) * width, 8)
-            if m in {Detect, YOLOEDetect, Segment, Segment26, YOLOESegment, YOLOESegment26, Pose, Pose26, OBB, OBB26,
-                     Detect_Edge, Detect_Small, Detect_Edge_End2End}:
+            if m in {
+                Detect,
+                YOLOEDetect,
+                Segment,
+                Segment26,
+                YOLOESegment,
+                YOLOESegment26,
+                Pose,
+                Pose26,
+                OBB,
+                OBB26,
+                Detect_Edge,
+                Detect_Small,
+                Detect_Edge_End2End,
+            }:
                 m.legacy = legacy
         elif m is v10Detect:
             args.append([ch[x] for x in f])
