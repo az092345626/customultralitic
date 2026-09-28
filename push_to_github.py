@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Script tự động đẩy thư mục hiện tại lên GitHub repository.
 Yêu cầu: git đã được cài đặt trên máy.
@@ -18,6 +17,7 @@ BRANCH = "main"
 TARGET_DIR = os.getcwd()  # Mặc định là thư mục hiện tại
 # ==============================================
 
+
 def run_cmd(cmd, cwd=None):
     """Chạy lệnh shell, trả về output và raise lỗi nếu thất bại."""
     result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
@@ -26,6 +26,7 @@ def run_cmd(cmd, cwd=None):
         print(result.stderr)
         sys.exit(1)
     return result.stdout.strip()
+
 
 def main():
     # 1. Chuyển đến thư mục đích
@@ -102,6 +103,7 @@ dataset/
     run_cmd(f"git push -u origin {BRANCH}")
 
     print("✅ Thành công! Code đã được đẩy lên repository.")
+
 
 if __name__ == "__main__":
     main()
