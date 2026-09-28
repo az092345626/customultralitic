@@ -60,6 +60,17 @@ from .block import (
     SCDown,
     TorchVision,
 )
+from .block_edge import (
+    ASFF_Lite,
+    BiFPN_Add,
+    C2f_Edge,
+    C3_Edge,
+    DyHead_Edge,
+    ECAAttention,
+    EdgeSPPF,
+    RepConv_Edge,
+    RepGhostBlock,
+)
 from .conv import (
     CBAM,
     ChannelAttention,
@@ -93,6 +104,11 @@ from .head import (
     YOLOESegment26,
     v10Detect,
 )
+from .head_edge import (
+    Detect_Edge,
+    Detect_Edge_End2End,
+    Detect_Small,
+)
 from .transformer import (
     AIFI,
     MLP,
@@ -104,22 +120,6 @@ from .transformer import (
     TransformerBlock,
     TransformerEncoderLayer,
     TransformerLayer,
-)
-from .block_edge import (
-    RepGhostBlock,
-    C2f_Edge,
-    C3_Edge,
-    BiFPN_Add,
-    ASFF_Lite,
-    DyHead_Edge,
-    EdgeSPPF,
-    ECAAttention,
-    RepConv_Edge,
-)
-from .head_edge import (
-    Detect_Edge,
-    Detect_Small,
-    Detect_Edge_End2End,
 )
 
 __all__ = (
@@ -143,15 +143,19 @@ __all__ = (
     "A2C2f",
     "AConv",
     "ADown",
+    "ASFF_Lite",
     "Attention",
     "BNContrastiveHead",
+    "BiFPN_Add",
     "Bottleneck",
     "BottleneckCSP",
     "C2f",
     "C2fAttn",
     "C2fCIB",
     "C2fPSA",
+    "C2f_Edge",
     "C3Ghost",
+    "C3_Edge",
     "C3k2",
     "C3x",
     "CBFuse",
@@ -168,6 +172,13 @@ __all__ = (
     "DeformableTransformerDecoder",
     "DeformableTransformerDecoderLayer",
     "Detect",
+    # Edge-optimized heads
+    "Detect_Edge",
+    "Detect_Edge_End2End",
+    "Detect_Small",
+    "DyHead_Edge",
+    "ECAAttention",
+    "EdgeSPPF",
     "Focus",
     "GhostBottleneck",
     "GhostConv",
@@ -187,6 +198,9 @@ __all__ = (
     "RTDETRDecoder",
     "RepC3",
     "RepConv",
+    "RepConv_Edge",
+    # Edge-optimized blocks
+    "RepGhostBlock",
     "RepNCSPELAN4",
     "RepVGGDW",
     "ResNetLayer",
@@ -203,18 +217,4 @@ __all__ = (
     "YOLOESegment",
     "YOLOESegment26",
     "v10Detect",
-    # Edge-optimized blocks
-    "RepGhostBlock",
-    "C2f_Edge",
-    "C3_Edge",
-    "BiFPN_Add",
-    "ASFF_Lite",
-    "DyHead_Edge",
-    "EdgeSPPF",
-    "ECAAttention",
-    "RepConv_Edge",
-    # Edge-optimized heads
-    "Detect_Edge",
-    "Detect_Small",
-    "Detect_Edge_End2End",
 )
